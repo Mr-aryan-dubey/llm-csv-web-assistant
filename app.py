@@ -78,7 +78,7 @@ if prompt := st.chat_input("Ask about your CSV or search the web..."):
                     handle_parsing_errors=True
                 )
 
-                # Smart routing with expanded keywords for real-time lookups
+                # Smart routing with expanded keywords and search synthesis
                 query_lower = prompt.lower()
                 search_keywords = [
                     "search", "latest", "news", "who is", "what is", "where is", "when is",
@@ -87,12 +87,22 @@ if prompt := st.chat_input("Ask about your CSV or search the web..."):
                 ]
 
                 if any(kw in query_lower.split() or kw in query_lower for kw in search_keywords):
-                    response = search.run(prompt)
+                    # Fetch raw web search snippets
+                    search_results = search.run(prompt)
+
+                    # Synthesize results into a clean, direct answer using the LLM
+                    synthesis_prompt = (
+                        f"Based on the following web search results, provide a direct, clean, "
+                        f"and concise answer to the user's question: '{prompt}'.\n\n"
+                        f"Search Results:\n{search_results}"
+                    )
+                    fallback_res = llm.invoke(synthesis_prompt)
+                    response = fallback_res.content if hasattr(fallback_res, 'content') else str(fallback_res)
                 else:
                     try:
                         response = pandas_agent.run(prompt)
                     except Exception:
-                        # Fallback to direct LLM response if pandas agent fails/parses incorrectly
+                        # Fallback to direct LLM response if pandas agent fails
                         fallback_res = llm.invoke(prompt)
                         response = fallback_res.content if hasattr(fallback_res, 'content') else str(fallback_res)
 
