@@ -78,11 +78,15 @@ if prompt := st.chat_input("Ask about your CSV or search the web..."):
                     handle_parsing_errors=True
                 )
 
-                # Smart routing with graceful fallback
+                # Smart routing with expanded keywords for real-time lookups
                 query_lower = prompt.lower()
-                search_keywords = ["search", "latest", "news", "who is", "what is", "where is", "when is", "weather", "current", "minister", "president", "prime minister"]
+                search_keywords = [
+                    "search", "latest", "news", "who is", "what is", "where is", "when is",
+                    "weather", "current", "minister", "president", "prime minister",
+                    "cm", "pm", "chief minister", "governor", "ceo", "head"
+                ]
 
-                if any(kw in query_lower for kw in search_keywords):
+                if any(kw in query_lower.split() or kw in query_lower for kw in search_keywords):
                     response = search.run(prompt)
                 else:
                     try:
