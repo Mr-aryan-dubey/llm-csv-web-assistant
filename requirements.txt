@@ -7,3 +7,4 @@ langchain-community
 langchain-experimental
 duckduckgo-search
 ddgs
+tabulate
