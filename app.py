@@ -10,7 +10,11 @@ from langchain_experimental.agents import create_pandas_dataframe_agent
 
 # Load environment variables
 load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# Retrieve API Key from Streamlit Secrets or local environment
+GROQ_API_KEY = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+if GROQ_API_KEY:
+    os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 
 # Page Configuration
 st.set_page_config(
@@ -22,12 +26,8 @@ st.set_page_config(
 st.title("🤖 Multi-Tool AI Assistant")
 st.markdown("Query your local CSV data or search the live web instantly using **Groq**.")
 
-# Sidebar for configuration & file upload
+# Sidebar for file upload only
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    api_key_input = st.text_input("Groq API Key", value=GROQ_API_KEY or "", type="password")
-
-    st.markdown("---")
     st.header("📂 Data Source")
     uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
@@ -43,10 +43,6 @@ with st.sidebar:
             "Value": [0]
         })
 
-# Initialize API Key
-if api_key_input:
-    os.environ["GROQ_API_KEY"] = api_key_input
-
 # Initialize Chat History in Session State
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -58,10 +54,6 @@ for message in st.session_state.messages:
 
 # User Input Box
 if prompt := st.chat_input("Ask about your CSV or search the web..."):
-    if not api_key_input:
-        st.error("Please enter your Groq API Key in the sidebar first.")
-        st.stop()
-
     # Append user message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
