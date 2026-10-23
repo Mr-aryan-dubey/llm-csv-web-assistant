@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_experimental.agents import create_pandas_dataframe_agent
+from langchain_core.messages import SystemMessage, HumanMessage
 
 # Load environment variables
 load_dotenv()
@@ -78,7 +79,13 @@ if prompt := st.chat_input("Ask about your CSV or search the web..."):
                     handle_parsing_errors=True
                 )
 
-                # Smart routing with strict search synthesis for up-to-date facts
+                # System persona defining creator identity
+                system_persona = (
+                    "You are a helpful Multi-Tool AI Assistant built and created by Mr. Aryan Dubey. "
+                    "If anyone asks who created you, who built you, or who your developer is, "
+                    "you must state clearly and proudly that you were created and built by Mr. Aryan Dubey."
+                )
+
                 query_lower = prompt.lower()
                 search_keywords = [
                     "search", "latest", "news", "who is", "what is", "where is", "when is",
@@ -86,26 +93,39 @@ if prompt := st.chat_input("Ask about your CSV or search the web..."):
                     "cm", "pm", "chief minister", "governor", "ceo", "head"
                 ]
 
-                if any(kw in query_lower.split() or kw in query_lower for kw in search_keywords):
-                    # Fetch raw web search snippets
+                # 1. Creator Identity Query Routing
+                if any(k in query_lower for k in
+                       ["created you", "built you", "your creator", "who made you", "who designed you",
+                        "who developed you"]):
+                    response = "I was created and built by **Mr. Aryan Dubey**!"
+
+                # 2. Live Web Search Query Routing
+                elif any(kw in query_lower.split() or kw in query_lower for kw in search_keywords):
                     search_results = search.run(prompt)
 
-                    # Strict synthesis prompt forcing the LLM to output the current 2026 leader
                     synthesis_prompt = (
-                        f"You are a precise fact-checking research assistant. "
                         f"Based strictly on the following web search results, provide a direct and accurate answer to: '{prompt}'.\n"
                         f"CRITICAL INSTRUCTION: Pay close attention to recent dates and leadership changes in 2026 (such as Samrat Choudhary serving as Chief Minister of Bihar). "
-                        f"Do not default to former or long-serving historical officeholders if a new person has taken office.\n\n"
+                        f"Do not default to former officeholders if a new person has taken office.\n\n"
                         f"Search Results:\n{search_results}"
                     )
-                    fallback_res = llm.invoke(synthesis_prompt)
+                    messages = [
+                        SystemMessage(content=system_persona),
+                        HumanMessage(content=synthesis_prompt)
+                    ]
+                    fallback_res = llm.invoke(messages)
                     response = fallback_res.content if hasattr(fallback_res, 'content') else str(fallback_res)
+
+                # 3. CSV Analysis & Fallback Query Routing
                 else:
                     try:
                         response = pandas_agent.run(prompt)
                     except Exception:
-                        # Fallback to direct LLM response if pandas agent fails
-                        fallback_res = llm.invoke(prompt)
+                        messages = [
+                            SystemMessage(content=system_persona),
+                            HumanMessage(content=prompt)
+                        ]
+                        fallback_res = llm.invoke(messages)
                         response = fallback_res.content if hasattr(fallback_res, 'content') else str(fallback_res)
 
                 st.markdown(response)
