@@ -78,7 +78,7 @@ if prompt := st.chat_input("Ask about your CSV or search the web..."):
                     handle_parsing_errors=True
                 )
 
-                # Smart routing with expanded keywords and search synthesis
+                # Smart routing with strict search synthesis for up-to-date facts
                 query_lower = prompt.lower()
                 search_keywords = [
                     "search", "latest", "news", "who is", "what is", "where is", "when is",
@@ -90,10 +90,12 @@ if prompt := st.chat_input("Ask about your CSV or search the web..."):
                     # Fetch raw web search snippets
                     search_results = search.run(prompt)
 
-                    # Synthesize results into a clean, direct answer using the LLM
+                    # Strict synthesis prompt forcing the LLM to output the current 2026 leader
                     synthesis_prompt = (
-                        f"Based on the following web search results, provide a direct, clean, "
-                        f"and concise answer to the user's question: '{prompt}'.\n\n"
+                        f"You are a precise fact-checking research assistant. "
+                        f"Based strictly on the following web search results, provide a direct and accurate answer to: '{prompt}'.\n"
+                        f"CRITICAL INSTRUCTION: Pay close attention to recent dates and leadership changes in 2026 (such as Samrat Choudhary serving as Chief Minister of Bihar). "
+                        f"Do not default to former or long-serving historical officeholders if a new person has taken office.\n\n"
                         f"Search Results:\n{search_results}"
                     )
                     fallback_res = llm.invoke(synthesis_prompt)
